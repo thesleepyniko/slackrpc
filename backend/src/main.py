@@ -5,7 +5,7 @@ import uvicorn
 import dotenv
 import redis
 from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -78,6 +78,15 @@ app = App(
 bolt_handler = SlackRequestHandler(app)
 
 web_app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+@web_app.get("/", response_class=HTMLResponse)
+async def home():
+    return """<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>SlackRPC</title></head>
+<body><h1>SlackRPC</h1></body>
+</html>"""
 
 @web_app.get("/success")
 def success():

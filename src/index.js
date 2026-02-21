@@ -22,8 +22,10 @@ log(`Using User-Agent: ${HEADERS['User-Agent']}`);
 async function pollURL(url, interval = 10000, maxAttempts=100) {
   for (let i = 0; i < maxAttempts; i++) {
     try {
+      log(`Polling (attempt ${i + 1}/${maxAttempts})...`);
       const response = await fetch(url, { headers: HEADERS });
       const data = await response.json();
+      log(`Poll response (attempt ${i + 1}/${maxAttempts}):`, JSON.stringify(data));
 
       if (data.status === 'complete') {
         return data;

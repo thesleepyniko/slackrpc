@@ -244,7 +244,7 @@ def generate_authentication_key(request: Request, code: str, state: str):
     return RedirectResponse("/success")
 
 
-@web_app.get("/api/auth/poll")
+@web_app.get("/api/oauth/poll")
 @limiter.limit("10/minute")
 def poll_authentication_success(request: Request, code: str):
     token = r.getdel(f"poll:{code}")

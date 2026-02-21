@@ -1,15 +1,16 @@
 import os
 import secrets
 from datetime import datetime, timezone
-
+import uvicorn
 import dotenv
 import redis
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import RedirectResponse, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from slack_bolt import App
-from slack_bolt.adapter.socket_mode import SocketModeHandler
+from slack_bolt.adapter.fastapi import SlackRequestHandler
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from slack_sdk.oauth import AuthorizeUrlGenerator
@@ -29,7 +30,7 @@ class Base(DeclarativeBase):
 
 class User(Base):
     __tablename__ = "users"
-    token: Mapped[str] = mapped_column(String, primary_key=False)
+    token: Mapped[str] = mapped_column(String, primary_key=True)
     slack_user_id: Mapped[str] = mapped_column(
         String, nullable=False
     )  # this one gets filled out when they oauth
@@ -74,6 +75,13 @@ app = App(
     token=os.environ.get("SLACK_BOT_TOKEN"),
     signing_secret=os.environ.get("SLACK_SIGNING_SECRET"),
 )
+bolt_handler = SlackRequestHandler(app)
+
+web_app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@web_app.get("/success")
+def success():
+    return RedirectResponse("/static/success.html")
 
 SLACK_CLIENT_ID = os.environ["OAUTH_CLIENT_ID"]
 SLACK_CLIENT_SECRET = os.environ["OAUTH_CLIENT_SECRET"]
@@ -89,7 +97,7 @@ USAGE = (
 
 
 class AuthRequest(BaseModel):
-    code: int
+    code: str
     hostname: str
 
 
@@ -98,20 +106,11 @@ class RPCRequest(BaseModel):
 
 
 class KeyRequest(BaseModel):
-    authentication_code: int
+    authentication_code: str
     hostname: str
 
 
 # fastapi shit
-# @web_app.get("/oauth/start")
-# def oauth_start():
-#     url = AuthorizeUrlGenerator(
-#         client_id=SLACK_CLIENT_ID,
-#         user_scopes=["users.profile:write"],
-#         redirect_uri=SLACK_REDIRECT_URI,
-#     ).generate(state=secrets.token_urlsafe(16))
-#     return RedirectResponse(url)
-
 
 def update_activity(
     user: User,
@@ -164,7 +163,7 @@ def update_activity(
 
 @web_app.get("/api/oauth/start")
 @limiter.limit("2/minute")
-def oauth_start(code: str, hostname: str):
+def oauth_start(request: Request, code: str, hostname: str):
     if not len(code) == 6 or not code.isalnum():
         raise HTTPException(400, detail="Code must be alphanumeric and 6 characters")
     else:
@@ -237,7 +236,7 @@ def generate_authentication_key(request: Request, code: str, state: str):
 
 @web_app.get("/api/auth/poll")
 @limiter.limit("4/minute")
-def poll_authentication_success(request: Request, code: int):
+def poll_authentication_success(request: Request, code: str):
     token = r.getdel(f"poll:{code}")
     if token:
         return {"status": "complete", "token": token}
@@ -247,8 +246,9 @@ def poll_authentication_success(request: Request, code: int):
 
 @web_app.delete("/api/activity")
 @limiter.limit("1/second")
-def clear_acitivity(request: Request):
-    pass
+def clear_acitivity(request: Request, user: User = Depends(get_user)):
+    update_activity(user, "", "", user.slack_access, user.slack_refresh)
+    return Response(status_code=204)
 
 
 @web_app.post("/api/activity")
@@ -364,6 +364,11 @@ def handle_command(ack, body, respond):
         )
 
 
+@web_app.post("/slack/events")
+async def slack_events(req: Request):
+    return await bolt_handler.handle(req)
+
+
 # Start your app
 if __name__ == "__main__":
-    SocketModeHandler(app, os.environ["SLACK_APP_TOKEN"]).start()
+    uvicorn.run(web_app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))

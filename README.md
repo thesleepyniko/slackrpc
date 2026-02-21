@@ -1,72 +1,43 @@
- <div align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/19228318/202900211-95e8474b-edbb-4048-ba0b-a581a6d57fc4.png" width=300>
-    <img alt="arRPC" src="https://user-images.githubusercontent.com/19228318/203024061-064fc015-9096-40c3-9786-ad23d90414a6.png" width=300>
-  </picture> <br>
-  <a href="https://choosealicense.com/licenses/mit/l"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
-  <a href="https://github.com/sponsors/CanadaHonk"><img alt="GitHub Sponsors" src="https://img.shields.io/github/sponsors/CanadaHonk?label=Sponsors&logo=github"></a>
-  <h3>An open implementation of Discord's local RPC servers</h3>
-  <h4>Allowing RPC where it was otherwise impossible, like Discord Web and custom clients</h4>
-</div>
+# slackRPC
 
-<br>
+Discord Rich Presence → Slack status. Based on [arRPC](https://github.com/OpenAsar/arRPC).
 
-arRPC is an open source implementation of Discord's half-documented local RPC servers for their desktop client. This open source implementation purely in NodeJS allows it to be used in many places where it is otherwise impossible to do: Discord web and alternative clients like ArmCord/etc. It opens a simple bridge WebSocket server which messages the JSON of exactly what to dispatch with in the client with no extra processing needed, allowing small and simple mods or plugins. **arRPC is experimental and a work in progress, so expect bugs, etc.**
+## How it works
 
-<br>
+The CLI intercepts Discord RPC calls locally and forwards activity to a backend, which updates your Slack status via OAuth.
 
-Rich Presence (RPC) is the name for how some apps can talk to Discord desktop on your PC via localhost servers to display detailed info about the app's state. This usually works via parts of Discord desktop natively doing things + parts of Discord web interpreting that and setting it as your status. arRPC is an open source implementation of the local RPC servers on your PC, allowing apps to talk to it thinking it was just normal Discord. It can then send that info to apps which usually don't get RPC, like Discord Web, ArmCord, etc. which can then set that as your status. This would otherwise not be possible, as web apps/browsers/etc can't just use Discord's already existing code and version.
+## Setup
 
-- App with Discord RPC
-- ~~Discord Desktop's native server~~ arRPC
-- ~~Discord Web's setting~~ mod/plugin
+### Backend
 
-<br>
+Required environment variables:
 
-## Usage
+```
+SLACK_BOT_TOKEN=
+SLACK_SIGNING_SECRET=
+OAUTH_CLIENT_ID=
+OAUTH_CLIENT_SECRET=
+OAUTH_REDIRECT_URI=
+```
 
-### Server
-Run `npx arrpc` in a terminal. Make sure you have a modern (>=18) version of [Node.js](https://nodejs.org) installed.
+Deploy with Docker (e.g. Coolify):
 
-### Web
-#### No Mods
-1. Get [the arRPC server running](#server-required)
-2. With Discord open, run the content of [`examples/bridge_mod.js`](examples/bridge_mod.js) in Console (Ctrl+Shift+I).
+```sh
+docker build -t slackrpc ./backend
+docker run -p 8000:8000 --env-file .env slackrpc
+```
 
-#### Vencord
-1. Get [the arRPC server running](#server-required)
-2. Just enable the `WebRichPresence (arRPC)` Vencord plugin!
+Redis must be available at `localhost:6379` (or set `REDIS_URL`).
 
-### Custom Clients
+### CLI
 
-#### ArmCord, Vesktop
-These clients have arRPC specially integrated, just enable the option in its settings (server not required)!
+```sh
+npm install -g slackrpc
+slackrpc
+```
 
-#### Webcord
-1. Get [the arRPC server running](#server-required)
-2. Disable the `Use built-in Content Security Policy` option in Advanced settings: ![image](https://user-images.githubusercontent.com/19228318/202926723-93b772fc-f37d-47d4-81fd-b11c5d4051e8.png)
-3. With Webcord open, run the content of [`examples/bridge_mod.js`](examples/bridge_mod.js) in the DevTools Console (Ctrl+Shift+I).
+On first run, a URL will be printed — open it to link your Slack account. Subsequent runs start immediately.
 
----
+## License
 
-Then just use apps with Discord RPC like normal and they *should* work!
-
-<br>
-
-## Supported
-
-### Transports
-- [X] WebSocket Server
-  - [X] JSON
-  - [ ] Erlpack
-- [ ] HTTP Server
-- [X] IPC
-- [X] Process Scanning
-
-### Commands
-- [X] DISPATCH
-- [X] SET_ACTIVITY
-- [X] INVITE_BROWSER
-- [X] GUILD_TEMPLATE_BROWSER
-- [X] DEEP_LINK
-- [X] CONNECTIONS_CALLBACK 
+MIT

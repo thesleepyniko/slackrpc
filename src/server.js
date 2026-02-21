@@ -8,6 +8,9 @@ import WSServer from './transports/websocket.js';
 import ProcessServer from './process/index.js';
 
 let socketId = 0;
+const slackrpc_url = process.env.SLACKRPC_URL || 'https://slackrpc.nikoo.dev';
+const authentication_key = process.env.SLACKRPC_AUTH_KEY || null;
+
 export default class RPCServer extends EventEmitter {
   constructor() { super(); return (async () => {
     this.onConnection = this.onConnection.bind(this);
@@ -96,6 +99,14 @@ export default class RPCServer extends EventEmitter {
             evt: null,
             nonce
           });
+          
+          fetch(slackrpc_url + '/api/activity/clear', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ authentication_key})
+          }).then(res => {
+            if (!res.ok) log(rgb(242, 88, 88, 'Failed to clear activity! Please check your internet connection and try again.'));
+          }).catch(() => log(rgb(242, 88, 88, 'Failed to clear activity! Please check your internet connection and try again.')));
 
           return this.emit('activity', {
             activity: null,
@@ -144,6 +155,14 @@ export default class RPCServer extends EventEmitter {
           evt: null,
           nonce
         });
+
+        fetch(slackrpc_url + '/api/activity/set', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ authentication_key, activity })
+        }).then(res => {
+          if (!res.ok) log(rgb(242, 88, 88, 'Failed to update activity! Please check your internet connection and try again.'));
+        }).catch(() => log(rgb(242, 88, 88, 'Failed to update activity! Please check your internet connection and try again.')));
 
         break;
 

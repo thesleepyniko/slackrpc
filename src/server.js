@@ -9,11 +9,11 @@ import ProcessServer from './process/index.js';
 
 let socketId = 0;
 const slackrpc_url = process.env.SLACKRPC_URL || 'https://slackrpc.nikoo.dev';
-const authentication_key = process.env.SLACKRPC_AUTH_KEY || null;
 const HEADERS = {
   'Content-Type': 'application/json',
   'User-Agent': process.env.SLACKRPC_USER_AGENT || 'slackRPC/1.0'
 };
+const getAuthKey = () => process.env.SLACKRPC_AUTH_KEY || null;
 
 export default class RPCServer extends EventEmitter {
   constructor() { super(); return (async () => {
@@ -104,10 +104,10 @@ export default class RPCServer extends EventEmitter {
             nonce
           });
           
-          fetch(slackrpc_url + '/api/activity/clear', {
-            method: 'POST',
-            headers: HEADERS,
-            body: JSON.stringify({ authentication_key})
+          fetch(slackrpc_url + '/api/activity', {
+            method: 'DELETE',
+            headers: { ...HEADERS, 'Authorization': `Bearer ${getAuthKey()}` },
+            body: JSON.stringify({})
           }).then(async res => {
             if (!res.ok) {
               let body = '';
@@ -164,10 +164,10 @@ export default class RPCServer extends EventEmitter {
           nonce
         });
 
-        fetch(slackrpc_url + '/api/activity/set', {
+        fetch(slackrpc_url + '/api/activity', {
           method: 'POST',
-          headers: HEADERS,
-          body: JSON.stringify({ authentication_key, activity })
+          headers: { ...HEADERS, 'Authorization': `Bearer ${getAuthKey()}` },
+          body: JSON.stringify({ activity })
         }).then(async res => {
           if (!res.ok) {
             let body = '';

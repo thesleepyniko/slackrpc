@@ -2,6 +2,8 @@
 
 import os from 'os';
 import crypto from 'crypto';
+import fs from 'fs';
+import { join } from 'path';
 import * as Bridge from './bridge.js';
 import Server from './server.js';
 
@@ -10,7 +12,7 @@ const log = (...args) => console.log(`[${rgb(88, 101, 242, 'slackRPC')}]`, ...ar
 
 log('slackRPC v1.0.0, based on arRPC v3.6.0');
 
-const authentication_key = process.env.SLACKRPC_AUTH_KEY || null;
+const TOKEN_PATH = join(os.homedir(), '.slackrpc');
 const slackrpc_url = process.env.SLACKRPC_URL || 'https://slackrpc.nikoo.dev';
 const HEADERS = {
   'Content-Type': 'application/json',
@@ -18,6 +20,17 @@ const HEADERS = {
 };
 
 log(`Using User-Agent: ${HEADERS['User-Agent']}`);
+
+// load token from env or disk
+if (!process.env.SLACKRPC_AUTH_KEY) {
+  try {
+    const saved = fs.readFileSync(TOKEN_PATH, 'utf8').trim();
+    if (saved) {
+      process.env.SLACKRPC_AUTH_KEY = saved;
+      log('Loaded auth token from', TOKEN_PATH);
+    }
+  } catch { /* file doesn't exist yet */ }
+}
 
 async function pollURL(url, interval = 10000, maxAttempts=100) {
   for (let i = 0; i < maxAttempts; i++) {
@@ -40,7 +53,7 @@ async function pollURL(url, interval = 10000, maxAttempts=100) {
   throw new Error('Polling timed out');
 } 
 
-if (authentication_key == null) {
+if (process.env.SLACKRPC_AUTH_KEY == null) {
   const authentication_code = Array.from(crypto.randomBytes(6)).map(b => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[b % 36]).join('');
   const params = new URLSearchParams({ code: authentication_code, hostname: os.hostname() });
   const res = await fetch(`${slackrpc_url}/api/oauth/start?${params}`, { headers: HEADERS });
@@ -60,6 +73,8 @@ if (authentication_key == null) {
     const result = await pollURL(`${slackrpc_url}/api/oauth/poll?code=${authentication_code}`);
     log('Successfully authenticated with Slack!');
     process.env.SLACKRPC_AUTH_KEY = result.token;
+    fs.writeFileSync(TOKEN_PATH, result.token, 'utf8');
+    log('Auth token saved to', TOKEN_PATH);
   } catch (e) {
     log(rgb(242, 88, 88, `Authentication timed out: ${e?.message ?? e}. Please try again.`));
     process.exit(1);

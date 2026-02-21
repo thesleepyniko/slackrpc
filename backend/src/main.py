@@ -188,7 +188,7 @@ def oauth_start(request: Request, code: str, hostname: str):
         user_scopes=["users.profile:write", "users.profile:read"],
         redirect_uri=SLACK_REDIRECT_URI,
     ).generate(state=state)
-    r.setex(f"CORS:{state}", 6000, True)
+    r.setex(f"CORS:{state}", 6000, "1")
     return {"url": url}
 
 

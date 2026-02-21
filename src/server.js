@@ -10,6 +10,10 @@ import ProcessServer from './process/index.js';
 let socketId = 0;
 const slackrpc_url = process.env.SLACKRPC_URL || 'https://slackrpc.nikoo.dev';
 const authentication_key = process.env.SLACKRPC_AUTH_KEY || null;
+const HEADERS = {
+  'Content-Type': 'application/json',
+  'User-Agent': process.env.SLACKRPC_USER_AGENT || 'slackRPC/1.0'
+};
 
 export default class RPCServer extends EventEmitter {
   constructor() { super(); return (async () => {
@@ -102,11 +106,15 @@ export default class RPCServer extends EventEmitter {
           
           fetch(slackrpc_url + '/api/activity/clear', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: HEADERS,
             body: JSON.stringify({ authentication_key})
-          }).then(res => {
-            if (!res.ok) log(rgb(242, 88, 88, 'Failed to clear activity! Please check your internet connection and try again.'));
-          }).catch(() => log(rgb(242, 88, 88, 'Failed to clear activity! Please check your internet connection and try again.')));
+          }).then(async res => {
+            if (!res.ok) {
+              let body = '';
+              try { body = await res.text(); } catch {}
+              log(rgb(242, 88, 88, `Failed to clear activity (HTTP ${res.status}): ${body || '(empty body)'}`))
+            }
+          }).catch(err => log(rgb(242, 88, 88, `Failed to clear activity (network error): ${err?.message ?? err}`)));
 
           return this.emit('activity', {
             activity: null,
@@ -158,11 +166,15 @@ export default class RPCServer extends EventEmitter {
 
         fetch(slackrpc_url + '/api/activity/set', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: HEADERS,
           body: JSON.stringify({ authentication_key, activity })
-        }).then(res => {
-          if (!res.ok) log(rgb(242, 88, 88, 'Failed to update activity! Please check your internet connection and try again.'));
-        }).catch(() => log(rgb(242, 88, 88, 'Failed to update activity! Please check your internet connection and try again.')));
+        }).then(async res => {
+          if (!res.ok) {
+            let body = '';
+            try { body = await res.text(); } catch {}
+            log(rgb(242, 88, 88, `Failed to update activity (HTTP ${res.status}): ${body || '(empty body)'}`))
+          }
+        }).catch(err => log(rgb(242, 88, 88, `Failed to update activity (network error): ${err?.message ?? err}`)));
 
         break;
 

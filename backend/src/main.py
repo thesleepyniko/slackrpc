@@ -54,7 +54,8 @@ def get_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> U
 
 # a lot of misc stuff including redis initalization
 dotenv.load_dotenv()
-r = redis.Redis(decode_responses=True)
+_redis_url = os.environ.get("REDIS_URL")
+r = redis.Redis.from_url(_redis_url, decode_responses=True) if _redis_url else redis.Redis(decode_responses=True)
 
 engine = create_engine("sqlite:///sessions.db")
 Base.metadata.create_all(engine)

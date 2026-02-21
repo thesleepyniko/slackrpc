@@ -171,7 +171,7 @@ def update_activity(
 
 
 @web_app.get("/api/oauth/start")
-@limiter.limit("2/minute")
+@limiter.limit("4/minute")
 def oauth_start(request: Request, code: str, hostname: str):
     if not len(code) == 6 or not code.isalnum():
         raise HTTPException(400, detail="Code must be alphanumeric and 6 characters")
@@ -192,7 +192,7 @@ def oauth_start(request: Request, code: str, hostname: str):
 
 
 @web_app.get("/api/auth/callback")
-@limiter.limit("1/minute")
+@limiter.limit("2/minute")
 def generate_authentication_key(request: Request, code: str, state: str):
     if not r.getdel(f"CORS:{state}"):
         raise HTTPException(400, detail="Invalid state")

@@ -192,7 +192,7 @@ def oauth_start(request: Request, code: str, hostname: str):
     return {"url": url}
 
 
-@web_app.get("/api/auth/callback")
+@web_app.get("/api/oauth/callback")
 @limiter.limit("2/minute")
 def generate_authentication_key(request: Request, code: str, state: str):
     if not r.getdel(f"CORS:{state}"):

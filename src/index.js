@@ -19,7 +19,7 @@ const HEADERS = {
 
 log(`Using User-Agent: ${HEADERS['User-Agent']}`);
 
-async function pollURL(url, interval = 30000, maxAttempts=20) {
+async function pollURL(url, interval = 10000, maxAttempts=100) {
   for (let i = 0; i < maxAttempts; i++) {
     try {
       const response = await fetch(url, { headers: HEADERS });
